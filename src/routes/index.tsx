@@ -2,6 +2,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { Ghost, Hand, Mic, MicOff, Play, Square, Trash2, X } from "lucide-react";
 import { useSignReader } from "@/lib/useSignReader";
+import { useOverlayDrag } from "@/lib/useOverlayDrag";
 
 export const Route = createFileRoute("/")({
   head: () => ({
@@ -29,12 +30,15 @@ declare global {
       isElectron: boolean;
       toggleClickThrough: () => Promise<boolean>;
       quit: () => Promise<void>;
+      dragStart?: () => Promise<void>;
+      dragEnd?: () => Promise<void>;
     };
   }
 }
 
 function Overlay() {
   const reader = useSignReader();
+  const drag = useOverlayDrag();
   const [ghost, setGhost] = useState(false);
   const [inShell, setInShell] = useState(false);
 
@@ -44,11 +48,20 @@ function Overlay() {
 
   return (
     <main className="flex min-h-screen items-end justify-center bg-transparent p-4 select-none">
-      <section className="glass w-full max-w-2xl overflow-hidden rounded-2xl">
-        <header className="drag-region flex items-center gap-2 border-b border-border/60 px-4 py-2.5">
+      <section
+        className="glass w-full max-w-2xl overflow-hidden rounded-2xl"
+        style={{ transform: `translate3d(${drag.offset.x}px, ${drag.offset.y}px, 0)` }}
+      >
+        <header
+          className="drag-region flex items-center gap-2 border-b border-border/60 px-4 py-2.5"
+          style={{ cursor: drag.dragging ? "grabbing" : "grab" }}
+          onPointerDown={drag.onPointerDown}
+          onDoubleClick={() => drag.reset()}
+        >
           <span className={`pulse-dot ${reader.active ? "is-live" : ""}`} />
           <Hand className="size-4 text-accent" />
           <h1 className="text-sm font-semibold tracking-tight">Sign Overlay</h1>
+
           <span className="text-[11px] text-muted-foreground">
             {reader.active
               ? reader.thinking

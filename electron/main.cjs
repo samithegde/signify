@@ -46,7 +46,33 @@ ipcMain.handle("overlay:toggle-click-through", () => {
   return clickThrough;
 });
 
+// Manual window dragging: follow the OS cursor while the user holds the header.
+let dragTimer = null;
+
+function stopDrag() {
+  if (dragTimer) clearInterval(dragTimer);
+  dragTimer = null;
+}
+
+ipcMain.handle("overlay:drag-start", () => {
+  if (!win) return;
+  stopDrag();
+  const start = screen.getCursorScreenPoint();
+  const [winX, winY] = win.getPosition();
+  const offsetX = start.x - winX;
+  const offsetY = start.y - winY;
+
+  dragTimer = setInterval(() => {
+    if (!win || win.isDestroyed()) return stopDrag();
+    const point = screen.getCursorScreenPoint();
+    win.setPosition(Math.round(point.x - offsetX), Math.round(point.y - offsetY));
+  }, 8);
+});
+
+ipcMain.handle("overlay:drag-end", () => stopDrag());
+
 ipcMain.handle("overlay:quit", () => app.quit());
+
 
 app.whenReady().then(() => {
   createWindow();
