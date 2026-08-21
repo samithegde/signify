@@ -2,6 +2,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { Ghost, Hand, Mic, MicOff, Play, Square, Trash2, X } from "lucide-react";
 import { useSignReader } from "@/lib/useSignReader";
+import { useOverlayDrag } from "@/lib/useOverlayDrag";
 
 export const Route = createFileRoute("/")({
   head: () => ({

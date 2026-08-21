@@ -56,5 +56,7 @@ export function useOverlayDrag() {
     };
   }, [dragging]);
 
-  return { offset, dragging, onPointerDown };
+  const reset = useCallback(() => setOffset({ x: 0, y: 0 }), []);
+
+  return { offset, dragging, onPointerDown, reset };
 }
