@@ -1,6 +1,6 @@
 import { SIGN_SYSTEM_PROMPT } from "./sign.shared";
 
-export async function interpretFrames(input: { frames: string[]; context?: string }) {
+export async function interpretFrames(input: { frames: string[]; context?: string | undefined }) {
   const key = process.env["LOVABLE_API_KEY"];
   if (!key) throw new Error("Missing LOVABLE_API_KEY");
 
