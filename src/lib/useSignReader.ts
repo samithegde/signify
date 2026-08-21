@@ -1,6 +1,4 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import { useServerFn } from "@tanstack/react-start";
-import { interpretSignFrames } from "./sign.functions";
 import { primeAudio, speak } from "./speech";
 
 export type Phrase = { id: number; text: string; at: number; confidence: number };
@@ -10,7 +8,6 @@ const FRAME_GAP_MS = 320;
 const FRAME_WIDTH = 512;
 
 export function useSignReader() {
-  const interpret = useServerFn(interpretSignFrames);
   const [active, setActive] = useState(false);
   const [voiceOn, setVoiceOn] = useState(true);
   const [thinking, setThinking] = useState(false);
@@ -85,14 +82,24 @@ export function useSignReader() {
 
           setThinking(true);
           try {
-            const result = await interpret({ data: { frames, context: transcriptRef.current } });
+            const response = await fetch("/api/interpret", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ frames, context: transcriptRef.current }),
+            });
+            const result = (await response.json()) as {
+              text?: string;
+              confidence?: number;
+              error?: string;
+            };
+            if (!response.ok) throw new Error(result.error ?? `Interpretation failed (${response.status})`);
             const text = result.text?.trim();
             if (text) {
               transcriptRef.current = `${transcriptRef.current} ${text}`.trim().slice(-1200);
               setPhrases((prev) =>
                 [
                   ...prev,
-                  { id: Date.now(), text, at: Date.now(), confidence: result.confidence },
+                  { id: Date.now(), text, at: Date.now(), confidence: result.confidence ?? 0.5 },
                 ].slice(-40),
               );
               if (voiceRef.current) void speak(text);
@@ -109,7 +116,7 @@ export function useSignReader() {
       setError(err instanceof Error ? err.message : "Could not start screen capture");
       stop();
     }
-  }, [grabFrame, interpret, stop]);
+  }, [grabFrame, stop]);
 
   const clear = useCallback(() => {
     setPhrases([]);
