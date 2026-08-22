@@ -98,7 +98,7 @@ function updateTrayMenu() {
         },
       },
       { type: "separator" },
-      { label: "Quit Sign Overlay", click: requestQuit },
+      { label: "Quit Signify", click: requestQuit },
     ]),
   );
 }
@@ -107,7 +107,7 @@ function createTray() {
   if (tray) return;
 
   tray = new Tray(APP_ICON);
-  tray.setToolTip("Sign Overlay");
+  tray.setToolTip("Signify");
   tray.on("click", showOverlay);
   tray.on("double-click", showDashboard);
   updateTrayMenu();
@@ -186,7 +186,7 @@ function createDashboard() {
     height: 760,
     minWidth: 760,
     minHeight: 580,
-    title: "Sign Overlay Dashboard",
+    title: "Signify Dashboard",
     backgroundColor: "#101820",
     icon: APP_ICON,
     show: false,

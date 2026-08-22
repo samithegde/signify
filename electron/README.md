@@ -1,4 +1,4 @@
-# Sign Overlay (Electron shell)
+# Signify (Electron shell)
 
 The Electron shell is a transparent, always-on-top, frameless window that loads the
 React overlay and auto-approves screen capture, so local hand-sign recognition can
@@ -21,7 +21,7 @@ OVERLAY_URL="https://your-app.example.com/" npx electron .
 ## Package
 
 ```bash
-npx @electron/packager . "SignOverlay" --platform=linux --arch=x64 \
+npx @electron/packager . "Signify" --platform=linux --arch=x64 \
   --out=electron-release --overwrite --ignore='node_modules' \
   --ignore='^/src' --ignore='^/electron-release'
 ```

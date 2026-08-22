@@ -65,7 +65,7 @@ npm install
 ```.env
 AI_API_KEY=your_gemini_api_key
 GEMINI_API_BASE_URL=https://generativelanguage.googleapis.com/v1beta
-SIGN_INTERPRETATION_MODEL=gemini-2.5-flash
+SIGN_INTERPRETATION_MODEL=gemini-3.6-flash
 GROQ_API_KEY=your_groq_api_key
 GROQ_WHISPER_MODEL=whisper-large-v3-turbo
 ```

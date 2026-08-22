@@ -1,7 +1,12 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { primeAudio, speak } from "./speech";
 
-export type Phrase = { id: number; text: string; at: number; confidence: number };
+export type Phrase = {
+  id: number;
+  text: string;
+  at: number;
+  confidence: number;
+};
 
 type Landmark = { x: number; y: number; z: number };
 type HandResults = { multiHandLandmarks?: Landmark[][] };
@@ -28,7 +33,9 @@ type HandsInstance = {
   send(input: { image: HTMLVideoElement }): Promise<void>;
   close(): void;
 };
-type HandsConstructor = new (config: { locateFile: (file: string) => string }) => HandsInstance;
+type HandsConstructor = new (config: {
+  locateFile: (file: string) => string;
+}) => HandsInstance;
 
 declare global {
   interface Window {
@@ -55,9 +62,13 @@ function loadHands() {
   if (handsLoader) return handsLoader;
 
   handsLoader = new Promise((resolve, reject) => {
-    const existing = document.getElementById(SCRIPT_ID) as HTMLScriptElement | null;
+    const existing = document.getElementById(
+      SCRIPT_ID,
+    ) as HTMLScriptElement | null;
     if (existing) {
-      existing.addEventListener("load", () => (window.Hands ? resolve(window.Hands) : reject()));
+      existing.addEventListener("load", () =>
+        window.Hands ? resolve(window.Hands) : reject(),
+      );
       existing.addEventListener("error", reject);
       return;
     }
@@ -68,7 +79,9 @@ function loadHands() {
     script.async = true;
     script.crossOrigin = "anonymous";
     script.onload = () =>
-      window.Hands ? resolve(window.Hands) : reject(new Error("MediaPipe Hands failed to load"));
+      window.Hands
+        ? resolve(window.Hands)
+        : reject(new Error("MediaPipe Hands failed to load"));
     script.onerror = () => reject(new Error("Could not load MediaPipe Hands"));
     document.head.appendChild(script);
   });
@@ -109,7 +122,8 @@ function extractKeypoints(results: HandResults) {
   hands.forEach((hand, handIndex) => {
     const wrist = hand[0];
     hand.slice(0, LANDMARKS_PER_HAND).forEach((point, pointIndex) => {
-      const offset = (handIndex * LANDMARKS_PER_HAND + pointIndex) * VALUES_PER_LANDMARK;
+      const offset =
+        (handIndex * LANDMARKS_PER_HAND + pointIndex) * VALUES_PER_LANDMARK;
       keypoints[offset] = point.x - wrist.x;
       keypoints[offset + 1] = point.y - wrist.y;
       keypoints[offset + 2] = point.z - wrist.z;
@@ -127,7 +141,12 @@ function palmScale(hand: Landmark[]) {
   return Math.max(0.001, distance(hand[0], hand[9]));
 }
 
-function isFingerExtended(hand: Landmark[], tip: number, pip: number, mcp: number) {
+function isFingerExtended(
+  hand: Landmark[],
+  tip: number,
+  pip: number,
+  mcp: number,
+) {
   const scale = palmScale(hand);
   const wrist = hand[0];
   const tipFromWrist = distance(hand[tip], wrist);
@@ -157,7 +176,9 @@ function isThumbExtended(hand: Landmark[]) {
   );
 }
 
-function classifyASLLetter(results: HandResults): { letter: ASLLetter; confidence: number } | null {
+function classifyASLLetter(
+  results: HandResults,
+): { letter: ASLLetter; confidence: number } | null {
   const hand = results.multiHandLandmarks?.[0];
   if (!hand) return null;
 
@@ -168,11 +189,14 @@ function classifyASLLetter(results: HandResults): { letter: ASLLetter; confidenc
   const pinky = isFingerExtended(hand, 20, 18, 17);
   const thumb = isThumbExtended(hand);
   const extendedFingers = [index, middle, ring, pinky].filter(Boolean).length;
-  const folded = [index, middle, ring, pinky].filter((extended) => !extended).length;
+  const folded = [index, middle, ring, pinky].filter(
+    (extended) => !extended,
+  ).length;
   const thumbToIndex = distance(hand[4], hand[8]) / scale;
   const thumbToMiddle = distance(hand[4], hand[12]) / scale;
   const thumbToPinky = distance(hand[4], hand[20]) / scale;
-  const confidence = (match: number, total = 1) => Math.min(0.96, 0.68 + (match / total) * 0.24);
+  const confidence = (match: number, total = 1) =>
+    Math.min(0.96, 0.68 + (match / total) * 0.24);
 
   const fingertipSpan = distance(hand[8], hand[20]) / scale;
   const indexVertical = hand[8].y < hand[5].y - scale * 0.25;
@@ -180,15 +204,19 @@ function classifyASLLetter(results: HandResults): { letter: ASLLetter; confidenc
   const fingersClosed = extendedFingers === 0;
 
   if (fingersClosed) {
-    if (thumbToIndex < 0.42 && thumbToMiddle < 0.52) return { letter: "O", confidence: confidence(1) };
-    if (thumbToIndex < 0.38 && thumbToMiddle >= 0.52) return { letter: "T", confidence: confidence(1) };
-    if (thumb && thumbToIndex > 0.75 && thumbToPinky > 0.9) return { letter: "A", confidence: confidence(1) };
+    if (thumbToIndex < 0.42 && thumbToMiddle < 0.52)
+      return { letter: "O", confidence: confidence(1) };
+    if (thumbToIndex < 0.38 && thumbToMiddle >= 0.52)
+      return { letter: "T", confidence: confidence(1) };
+    if (thumb && thumbToIndex > 0.75 && thumbToPinky > 0.9)
+      return { letter: "A", confidence: confidence(1) };
     if (thumbToIndex >= 0.42 && thumbToIndex < 0.9 && thumbToPinky < 1.15)
       return { letter: "C", confidence: confidence(1) };
     if (thumbToMiddle < 0.65) return { letter: "E", confidence: confidence(1) };
   }
 
-  if (extendedFingers === 4 && !thumb) return { letter: "B", confidence: confidence(1) };
+  if (extendedFingers === 4 && !thumb)
+    return { letter: "B", confidence: confidence(1) };
   if (extendedFingers === 3 && !index && thumbToIndex < 0.7)
     return { letter: "F", confidence: confidence(1) };
 
@@ -197,20 +225,27 @@ function classifyASLLetter(results: HandResults): { letter: ASLLetter; confidenc
       return { letter: "L", confidence: confidence(1) };
     if (thumb && Math.abs(hand[8].y - hand[4].y) < scale * 0.65)
       return { letter: "G", confidence: confidence(1) };
-    if (indexVertical && thumbToMiddle < 0.75) return { letter: "D", confidence: confidence(1) };
+    if (indexVertical && thumbToMiddle < 0.75)
+      return { letter: "D", confidence: confidence(1) };
   }
 
   if (!index && !middle && !ring && pinky) {
-    if (thumb && thumbToPinky > 0.8) return { letter: "Y", confidence: confidence(1) };
+    if (thumb && thumbToPinky > 0.8)
+      return { letter: "Y", confidence: confidence(1) };
     if (!thumb) return { letter: "I", confidence: confidence(1) };
   }
 
   if (index && middle && !ring && !pinky) {
-    if (thumb && hand[8].y > hand[0].y) return { letter: "P", confidence: confidence(1) };
-    return { letter: fingertipSpan < 0.62 ? "U" : "V", confidence: confidence(1) };
+    if (thumb && hand[8].y > hand[0].y)
+      return { letter: "P", confidence: confidence(1) };
+    return {
+      letter: fingertipSpan < 0.62 ? "U" : "V",
+      confidence: confidence(1),
+    };
   }
 
-  if (index && middle && ring && !pinky) return { letter: "W", confidence: confidence(1) };
+  if (index && middle && ring && !pinky)
+    return { letter: "W", confidence: confidence(1) };
 
   return null;
 }
@@ -220,7 +255,8 @@ function recognizeHandSign(
   keypointBuffer: Float32Array[],
   letterHistory: ASLLetter[],
 ) {
-  if (keypointBuffer.length < WINDOW_SIZE) return { letter: null, text: "", confidence: 0 };
+  if (keypointBuffer.length < WINDOW_SIZE)
+    return { letter: null, text: "", confidence: 0 };
 
   const prediction = classifyASLLetter(results);
   if (!prediction) return { letter: null, text: "", confidence: 0 };
@@ -232,12 +268,12 @@ function recognizeHandSign(
     (next, item) => ({ ...next, [item]: (next[item] ?? 0) + 1 }),
     {} as Partial<Record<ASLLetter, number>>,
   );
-  const [stableLetter, stableCount] = Object.entries(counts).sort((a, b) => b[1] - a[1])[0] as [
-    ASLLetter,
-    number,
-  ];
+  const [stableLetter, stableCount] = Object.entries(counts).sort(
+    (a, b) => b[1] - a[1],
+  )[0] as [ASLLetter, number];
 
-  if (stableCount < MIN_STABLE_FRAMES) return { letter: null, text: "", confidence: 0 };
+  if (stableCount < MIN_STABLE_FRAMES)
+    return { letter: null, text: "", confidence: 0 };
 
   return {
     letter: stableLetter,
@@ -292,11 +328,17 @@ export function useMediaPipeSignReader() {
 
   const pushPhrase = useCallback((text: string, confidence: number) => {
     const now = Date.now();
-    if (text === lastSpokenRef.current && now - lastSpokenAtRef.current < SPEAK_COOLDOWN_MS) return;
+    if (
+      text === lastSpokenRef.current &&
+      now - lastSpokenAtRef.current < SPEAK_COOLDOWN_MS
+    )
+      return;
 
     lastSpokenRef.current = text;
     lastSpokenAtRef.current = now;
-    setPhrases((prev) => [...prev, { id: now, text, at: now, confidence }].slice(-40));
+    setPhrases((prev) =>
+      [...prev, { id: now, text, at: now, confidence }].slice(-40),
+    );
     if (voiceRef.current) void speak(text);
   }, []);
 
@@ -326,8 +368,15 @@ export function useMediaPipeSignReader() {
         }
 
         noHandFramesRef.current = 0;
-        const prediction = recognizeHandSign(results, buffer, letterHistoryRef.current);
-        if (prediction.letter && prediction.letter !== emittedLetterRef.current) {
+        const prediction = recognizeHandSign(
+          results,
+          buffer,
+          letterHistoryRef.current,
+        );
+        if (
+          prediction.letter &&
+          prediction.letter !== emittedLetterRef.current
+        ) {
           emittedLetterRef.current = prediction.letter;
           pushPhrase(prediction.text, prediction.confidence);
         }
@@ -359,7 +408,11 @@ export function useMediaPipeSignReader() {
 
       frameRef.current = requestAnimationFrame(processFrame);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Could not start hand-sign recognition");
+      setError(
+        err instanceof Error
+          ? err.message
+          : "Could not start hand-sign recognition",
+      );
       stop();
     }
   }, [pushPhrase, stop]);
@@ -387,9 +440,10 @@ export function useMediaPipeSignReader() {
 }
 
 const GEMINI_FRAMES_PER_BURST = 2;
-const GEMINI_FRAME_GAP_MS = 150;
-const GEMINI_REQUEST_COOLDOWN_MS = 1800;
+const GEMINI_FRAME_GAP_MS = 50;
+const GEMINI_REQUEST_COOLDOWN_MS = 600;
 const GEMINI_RATE_LIMIT_BACKOFF_MS = 6000;
+const GEMINI_TIMEOUT_BACKOFF_MS = 8000;
 const GEMINI_FRAME_WIDTH = 512;
 
 export function useSignReader() {
@@ -433,11 +487,41 @@ export function useSignReader() {
     return canvas.toDataURL("image/jpeg", 0.78);
   }, []);
 
+  const overridePhrase = useCallback((text: string) => {
+    const phraseText = text.trim();
+    if (!phraseText) return;
+    const now = Date.now();
+
+    setError(null);
+    transcriptRef.current = `${transcriptRef.current} ${phraseText}`
+      .trim()
+      .slice(-1200);
+    setPhrases((previous) =>
+      [
+        ...previous,
+        { id: now, text: phraseText, at: now, confidence: 1 },
+      ].slice(-40),
+    );
+    if (voiceRef.current) void speak(phraseText);
+  }, []);
+
+  const correctLatestPhrase = useCallback((from: string, to: string) => {
+    setPhrases((previous) => {
+      const latest = previous[previous.length - 1];
+      if (!latest || latest.text.toLowerCase() !== from.toLowerCase()) return previous;
+      transcriptRef.current = transcriptRef.current.replace(/\s*[^\s]+$/, ` ${to}`).trim();
+      return [...previous.slice(0, -1), { ...latest, text: to }];
+    });
+  }, []);
+
   const start = useCallback(async () => {
     setError(null);
     try {
       primeAudio();
-      const stream = await navigator.mediaDevices.getDisplayMedia({ video: { frameRate: 24 }, audio: false });
+      const stream = await navigator.mediaDevices.getDisplayMedia({
+        video: { frameRate: 24 },
+        audio: false,
+      });
       streamRef.current = stream;
       stream.getVideoTracks()[0]?.addEventListener("ended", stop);
       const video = document.createElement("video");
@@ -452,10 +536,16 @@ export function useSignReader() {
       void (async () => {
         while (loopRef.current) {
           const frames: string[] = [];
-          for (let index = 0; index < GEMINI_FRAMES_PER_BURST && loopRef.current; index += 1) {
+          for (
+            let index = 0;
+            index < GEMINI_FRAMES_PER_BURST && loopRef.current;
+            index += 1
+          ) {
             const frame = grabFrame();
             if (frame) frames.push(frame);
-            await new Promise((resolve) => setTimeout(resolve, GEMINI_FRAME_GAP_MS));
+            await new Promise((resolve) =>
+              setTimeout(resolve, GEMINI_FRAME_GAP_MS),
+            );
           }
           if (!loopRef.current || !frames.length) continue;
           setThinking(true);
@@ -465,33 +555,67 @@ export function useSignReader() {
               headers: { "Content-Type": "application/json" },
               body: JSON.stringify({ frames, context: transcriptRef.current }),
             });
-            const result = (await response.json()) as { text?: string; confidence?: number; error?: string };
+            const result = (await response.json()) as {
+              text?: string;
+              confidence?: number;
+              error?: string;
+            };
             if (!response.ok) {
-              const error = new Error(result.error ?? `Gemini interpretation failed (${response.status})`);
+              const error = new Error(
+                result.error ??
+                  `Gemini interpretation failed (${response.status})`,
+              );
               (error as Error & { status?: number }).status = response.status;
               throw error;
             }
             const text = result.text?.trim();
             if (text && (result.confidence ?? 0) >= 0.55) {
-              transcriptRef.current = `${transcriptRef.current} ${text}`.trim().slice(-1200);
-              const phrase = { id: Date.now(), text, at: Date.now(), confidence: result.confidence ?? 0.55 };
+              transcriptRef.current = `${transcriptRef.current} ${text}`
+                .trim()
+                .slice(-1200);
+              const phrase = {
+                id: Date.now(),
+                text,
+                at: Date.now(),
+                confidence: result.confidence ?? 0.55,
+              };
               setPhrases((previous) => [...previous, phrase].slice(-40));
               if (voiceRef.current) void speak(text);
             }
           } catch (err) {
-            setError(err instanceof Error ? err.message : "Gemini interpretation failed");
-            const status = err instanceof Error ? (err as Error & { status?: number }).status : undefined;
+            const status =
+              err instanceof Error
+                ? (err as Error & { status?: number }).status
+                : undefined;
+            if (status !== 429) {
+              setError(
+                err instanceof Error
+                  ? err.message
+                  : "Gemini interpretation failed",
+              );
+            }
             await new Promise((resolve) =>
-              setTimeout(resolve, status === 429 ? GEMINI_RATE_LIMIT_BACKOFF_MS : 1500),
+              setTimeout(
+                resolve,
+                status === 429
+                  ? GEMINI_RATE_LIMIT_BACKOFF_MS
+                  : status === 503 || status === 504
+                    ? GEMINI_TIMEOUT_BACKOFF_MS
+                    : 1500,
+              ),
             );
           } finally {
             setThinking(false);
           }
-          await new Promise((resolve) => setTimeout(resolve, GEMINI_REQUEST_COOLDOWN_MS));
+          await new Promise((resolve) =>
+            setTimeout(resolve, GEMINI_REQUEST_COOLDOWN_MS),
+          );
         }
       })();
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Could not start screen capture");
+      setError(
+        err instanceof Error ? err.message : "Could not start screen capture",
+      );
       stop();
     }
   }, [grabFrame, stop]);
@@ -501,5 +625,18 @@ export function useSignReader() {
     transcriptRef.current = "";
   }, []);
 
-  return { active, thinking, error, phrases, voiceOn, setVoiceOn, start, stop, clear, latest: phrases[phrases.length - 1] ?? null };
+  return {
+    active,
+    thinking,
+    error,
+    phrases,
+    voiceOn,
+    setVoiceOn,
+    start,
+    stop,
+    clear,
+    overridePhrase,
+    correctLatestPhrase,
+    latest: phrases[phrases.length - 1] ?? null,
+  };
 }

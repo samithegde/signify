@@ -4,7 +4,7 @@ export async function interpretFrames(input: { frames: string[]; context?: strin
   const key = process.env["AI_API_KEY"];
   if (!key) throw new Error("Missing AI_API_KEY");
   const baseUrl = process.env["GEMINI_API_BASE_URL"] || "https://generativelanguage.googleapis.com/v1beta";
-  const model = process.env["SIGN_INTERPRETATION_MODEL"] || "gemini-2.5-flash";
+  const model = process.env["SIGN_INTERPRETATION_MODEL"] || "gemini-3.6-flash";
   const parts = input.frames.map((frame) => {
     const match = frame.match(/^data:([^;,]+)[^,]*,(.+)$/);
     if (!match?.[1] || !match[2]) throw new Error("Invalid sign frame");
@@ -19,7 +19,10 @@ export async function interpretFrames(input: { frames: string[]; context?: strin
       body: JSON.stringify({
         systemInstruction: { parts: [{ text: SIGN_SYSTEM_PROMPT }] },
         contents: [{ role: "user", parts: [{ text: `Previous transcript: ${input.context?.slice(-600) || "(none)"}` }, ...parts] }],
-        generationConfig: { responseMimeType: "application/json", temperature: 0 },
+        generationConfig: {
+          responseMimeType: "application/json",
+          temperature: 0,
+        },
       }),
     },
   );
@@ -56,14 +59,11 @@ export async function transcribeAudio(input: { audio: string; context?: string |
   const model = process.env["GROQ_WHISPER_MODEL"] || "whisper-large-v3-turbo";
   const audioBytes = Buffer.from(match[2], "base64");
   const form = new FormData();
-  form.append("file", new Blob([audioBytes], { type: match[1] }), "audio.webm");
+  const extension = match[1].split("/")[1]?.split(";")[0] || "webm";
+  form.append("file", new Blob([audioBytes], { type: match[1] }), `audio.${extension}`);
   form.append("model", model);
   form.append("response_format", "json");
   form.append("temperature", "0");
-  form.append(
-    "prompt",
-    `Transcribe only the new spoken words. Do not repeat this recent transcript: ${input.context?.slice(-600) || "(none)"}`,
-  );
 
   const response = await fetch("https://api.groq.com/openai/v1/audio/transcriptions", {
     method: "POST",

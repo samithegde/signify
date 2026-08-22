@@ -170,7 +170,7 @@ export function Dashboard() {
               </div>
               <div>
                 <strong>Launch on startup</strong>
-                <span>Open Sign Overlay when you sign in</span>
+                <span>Open Signify when you sign in</span>
               </div>
               <Switch
                 checked={launchOnStartup}
