@@ -1,7 +1,9 @@
 # Signify by Samit Hegde
 <img width="1640" height="664" alt="signifywordmark" src="https://github.com/user-attachments/assets/472b7902-ee2d-410d-ae5d-4baade72122b" />
 
-A desktop accessibility tool that uses Google Gemini Vision to interpret ASL fingerspelling and short sign-language phrases from screen content. Results appear as live captions and can optionally be spoken aloud.
+A desktop accessibility and creative expression tool for Deaf, hard-of-hearing, mute, and non-speaking users. Signify uses Google Gemini Vision to interpret ASL fingerspelling and short sign-language phrases from screen content. Results appear as live captions and can optionally be spoken aloud.
+
+Signify also supports an art-focused music workflow: listen mode captures computer audio, transcribes lyrics with Groq Whisper, and turns the text into ASL-style fingerspelling and sign cues.
 
 ## Features
 
@@ -10,12 +12,15 @@ A desktop accessibility tool that uses Google Gemini Vision to interpret ASL fin
 - Google Gemini Vision sign interpretation
 - ASL letter and phrase recognition
 - Text-to-sign fingerspelling display
-- Computer-audio transcription
+- Computer-audio transcription with Groq Whisper
+- Music lyric-to-sign workflow through listen mode
 - Optional spoken output
 - Click-through overlay mode
 - Adjustable overlay opacity
+- Draggable and resizable overlay
 - Global keyboard shortcuts
 - Quick phrase dictionary
+- MediaPipe and Python hand-keypoint prototype for efficient local recognition
 
 ## How It Works
 
@@ -29,6 +34,7 @@ The Electron shell creates two windows:
 - Captures selected screen content
 - Sends short frame bursts to Google Gemini
 - Displays recognized captions
+- Shows typed, transcribed, or lyric-based words as signs
 
 ### Dashboard Window
 
@@ -40,9 +46,11 @@ The Electron shell creates two windows:
 - Shows or hides the overlay
 - Controls launch-on-startup behavior
 
-Google Gemini receives consecutive screen frames and returns the interpreted text with a confidence score. Low-confidence results are ignored.
+Google Gemini receives consecutive screen frames and returns interpreted text with a confidence score. Low-confidence results are ignored.
 
-The project also retains the previous MediaPipe landmark implementation for experimentation, but Gemini is the active recognition system.
+Groq Whisper powers listen mode by transcribing computer audio into text. Signify can then display that text as ASL-style fingerspelling and common phrase cues, which makes it useful for turning music lyrics into a visual sign-language experience.
+
+The project also includes a MediaPipe landmark implementation in `scripts/sign_keypoints.py`. I added this because sending too many frames to Gemini can cause rate limiting and slow down real-time recognition. The Python script uses OpenCV, NumPy, and MediaPipe to read webcam frames, extract hand landmarks, normalize keypoints, and classify simple hand shapes locally as a more efficient recognition path.
 
 ## Requirements
 
@@ -50,8 +58,9 @@ The project also retains the previous MediaPipe landmark implementation for expe
 - npm
 - Electron-compatible desktop environment
 - Google Gemini API key for sign interpretation
-- Groq API key for listen-mode voice transcription
+- Groq API key for listen-mode audio transcription
 - Screen-sharing support
+- Python dependencies for the optional MediaPipe keypoint prototype
 
 ## Installation
 
@@ -59,6 +68,12 @@ The project also retains the previous MediaPipe landmark implementation for expe
 git clone https://github.com/your-username/sign-dialogue-overlay.git
 cd sign-dialogue-overlay
 npm install
+```
+
+Install Python dependencies for the optional keypoint prototype:
+
+```bash
+pip install -r requirements.txt
 ```
 
 ## Create a .env file in the project root:
@@ -82,6 +97,11 @@ npx electron .
 ```
 
 The dashboard opens as a normal taskbar window, while the overlay appears separately on top of other applications.
+
+Run the optional MediaPipe keypoint prototype:
+```bash
+npm run sign:keypoints
+```
 
 Keyboard Shortcuts:
 `Ctrl/Cmd + Shift + O	| Show or hide the overlay`
