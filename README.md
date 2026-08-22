@@ -1,4 +1,4 @@
-# Signify Overlay
+# Signify by Samit Hegde
 <img width="1640" height="664" alt="signifywordmark" src="https://github.com/user-attachments/assets/472b7902-ee2d-410d-ae5d-4baade72122b" />
 
 A desktop accessibility tool that uses Google Gemini Vision to interpret ASL fingerspelling and short sign-language phrases from screen content. Results appear as live captions and can optionally be spoken aloud.
