@@ -32,25 +32,36 @@ declare global {
       quit: () => Promise<void>;
       dragStart?: () => Promise<void>;
       dragEnd?: () => Promise<void>;
+      resizeStart?: () => Promise<void>;
+      resizeEnd?: () => Promise<void>;
     };
   }
 }
 
+const TRANSLUCENCY = [0.42, 0.68, 0.9];
+
 function Overlay() {
   const reader = useSignReader();
   const drag = useOverlayDrag();
+  const resize = useOverlayResize();
   const [ghost, setGhost] = useState(false);
   const [inShell, setInShell] = useState(false);
+  const [alphaStep, setAlphaStep] = useState(1);
 
   useEffect(() => setInShell(Boolean(window.overlay?.isElectron)), []);
 
   const history = reader.phrases.slice(0, -1).slice(-6);
+  const alpha = TRANSLUCENCY[alphaStep];
 
   return (
     <main className="flex min-h-screen items-end justify-center bg-transparent p-4 select-none">
       <section
-        className="glass w-full max-w-2xl overflow-hidden rounded-2xl"
-        style={{ transform: `translate3d(${drag.offset.x}px, ${drag.offset.y}px, 0)` }}
+        className="glass relative w-full max-w-2xl overflow-hidden rounded-2xl"
+        style={{
+          transform: `translate3d(${drag.offset.x}px, ${drag.offset.y}px, 0)`,
+          background: `oklch(0.17 0.02 250 / ${alpha})`,
+          ...(resize.size ? { width: resize.size.w, height: resize.size.h, maxWidth: "none" } : {}),
+        }}
       >
         <header
           className="drag-region flex items-center gap-2 border-b border-border/60 px-4 py-2.5"
@@ -58,6 +69,7 @@ function Overlay() {
           onPointerDown={drag.onPointerDown}
           onDoubleClick={() => drag.reset()}
         >
+
           <span className={`pulse-dot ${reader.active ? "is-live" : ""}`} />
           <Hand className="size-4 text-accent" />
           <h1 className="text-sm font-semibold tracking-tight">Sign Overlay</h1>
