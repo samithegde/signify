@@ -18,6 +18,8 @@ function createWindow() {
     frame: false,
     transparent: true,
     resizable: true,
+    minWidth: 360,
+    minHeight: 180,
     alwaysOnTop: true,
     skipTaskbar: true,
     hasShadow: false,
@@ -70,6 +72,33 @@ ipcMain.handle("overlay:drag-start", () => {
 });
 
 ipcMain.handle("overlay:drag-end", () => stopDrag());
+
+// Manual resizing from the corner grip.
+let resizeTimer = null;
+
+function stopResize() {
+  if (resizeTimer) clearInterval(resizeTimer);
+  resizeTimer = null;
+}
+
+ipcMain.handle("overlay:resize-start", () => {
+  if (!win) return;
+  stopResize();
+  const [x, y] = win.getPosition();
+
+  resizeTimer = setInterval(() => {
+    if (!win || win.isDestroyed()) return stopResize();
+    const point = screen.getCursorScreenPoint();
+    win.setBounds({
+      x,
+      y,
+      width: Math.max(360, Math.round(point.x - x)),
+      height: Math.max(180, Math.round(point.y - y)),
+    });
+  }, 16);
+});
+
+ipcMain.handle("overlay:resize-end", () => stopResize());
 
 ipcMain.handle("overlay:quit", () => app.quit());
 
