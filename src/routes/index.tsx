@@ -8,6 +8,7 @@ import {
   Mic,
   MicOff,
   Play,
+  Settings,
   Square,
   Trash2,
   Volume2,
@@ -30,7 +31,10 @@ export const Route = createFileRoute("/")({
         content:
           "A desktop overlay that watches your screen, recognizes hand signs locally, and speaks and captions the words in real time.",
       },
-      { property: "og:title", content: "Sign Overlay - Live Hand Sign Captions" },
+      {
+        property: "og:title",
+        content: "Sign Overlay - Live Hand Sign Captions",
+      },
       {
         property: "og:description",
         content:
@@ -45,7 +49,11 @@ const TRANSLUCENCY = [0.42, 0.68, 0.9];
 const AUDIO_CHUNK_MS = 4200;
 
 function App() {
-  return new URLSearchParams(window.location.search).has("dashboard") ? <Dashboard /> : <Overlay />;
+  return new URLSearchParams(window.location.search).has("dashboard") ? (
+    <Dashboard />
+  ) : (
+    <Overlay />
+  );
 }
 
 function Overlay() {
@@ -94,7 +102,9 @@ function Overlay() {
         style={{
           transform: `translate3d(${drag.offset.x}px, ${drag.offset.y}px, 0)`,
           background: `oklch(0.17 0.02 250 / ${alpha})`,
-          ...(resize.size ? { width: resize.size.w, height: resize.size.h, maxWidth: "none" } : {}),
+          ...(resize.size
+            ? { width: resize.size.w, height: resize.size.h, maxWidth: "none" }
+            : {}),
         }}
       >
         <header
@@ -104,8 +114,14 @@ function Overlay() {
           onPointerEnter={restoreInteraction}
           onDoubleClick={() => drag.reset()}
         >
-          <span className={`pulse-dot ${reader.active || audio.active ? "is-live" : ""}`} />
-          <img className="overlay-brandmark" src={signifyBasicBrandmarkUrl} alt="" />
+          <span
+            className={`pulse-dot ${reader.active || audio.active ? "is-live" : ""}`}
+          />
+          <img
+            className="overlay-brandmark"
+            src={signifyBasicBrandmarkUrl}
+            alt=""
+          />
           <h1 className="text-sm font-semibold tracking-tight">Sign Overlay</h1>
 
           <span className="text-[11px] text-muted-foreground">
@@ -129,7 +145,9 @@ function Overlay() {
                 checked={mode === "words-to-sign"}
                 aria-label="Switch between sign to words and words to sign"
                 onCheckedChange={(checked) =>
-                  updateSettings({ mode: checked ? "words-to-sign" : "sign-to-words" })
+                  updateSettings({
+                    mode: checked ? "words-to-sign" : "sign-to-words",
+                  })
                 }
               />
               <Keyboard className="size-3.5" />
@@ -140,42 +158,74 @@ function Overlay() {
                 title={voiceOn ? "Mute voice" : "Unmute voice"}
                 onClick={() => updateSettings({ voiceOn: !voiceOn })}
               >
-                {voiceOn ? <Mic className="size-4" /> : <MicOff className="size-4" />}
+                {voiceOn ? (
+                  <Mic className="size-4" />
+                ) : (
+                  <MicOff className="size-4" />
+                )}
               </button>
             )}
             <button
               className="ctl"
               title="Cycle translucency"
               onClick={() => {
-                const current = TRANSLUCENCY.findIndex((step) => Math.abs(step - alpha) < 0.02);
-                const next = TRANSLUCENCY[(current + 1) % TRANSLUCENCY.length] ?? TRANSLUCENCY[0];
+                const current = TRANSLUCENCY.findIndex(
+                  (step) => Math.abs(step - alpha) < 0.02,
+                );
+                const next =
+                  TRANSLUCENCY[(current + 1) % TRANSLUCENCY.length] ??
+                  TRANSLUCENCY[0] ??
+                  alpha;
                 updateSettings({ opacity: Math.round(next * 100) });
               }}
             >
               <Contrast className="size-4" />
             </button>
             {mode === "sign-to-words" ? (
-              <button className="ctl" title="Clear transcript" onClick={reader.clear}>
+              <button
+                className="ctl"
+                title="Clear transcript"
+                onClick={reader.clear}
+              >
                 <Trash2 className="size-4" />
               </button>
             ) : (
-              <button className="ctl" title="Clear words" onClick={() => setWords("")}>
+              <button
+                className="ctl"
+                title="Clear words"
+                onClick={() => setWords("")}
+              >
                 <Trash2 className="size-4" />
               </button>
             )}
             {inShell && (
               <>
                 <button
+                  className="ctl"
+                  title="Open dashboard"
+                  onClick={() => void window.overlay!.openDashboard?.()}
+                >
+                  <Settings className="size-4" />
+                </button>
+                <button
                   className={`ctl ${ghost ? "is-on" : ""}`}
-                  title={ghost ? "Disable click-through mode" : "Enable click-through mode"}
-                  onClick={async () => setGhost(await window.overlay!.toggleClickThrough())}
+                  title={
+                    ghost
+                      ? "Disable click-through mode"
+                      : "Enable click-through mode"
+                  }
+                  onClick={async () =>
+                    setGhost(await window.overlay!.toggleClickThrough())
+                  }
                 >
                   <Ghost className="size-4" />
                 </button>
                 <button
                   className="ctl"
                   title="Hide overlay"
-                  onClick={() => void window.overlay!.setOverlayVisible?.(false)}
+                  onClick={() =>
+                    void window.overlay!.setOverlayVisible?.(false)
+                  }
                 >
                   <X className="size-4" />
                 </button>
@@ -197,7 +247,11 @@ function Overlay() {
           )}
         </div>
 
-        <div className="no-drag grip" title="Drag to resize" onPointerDown={resize.onPointerDown} />
+        <div
+          className="no-drag grip"
+          title="Drag to resize"
+          onPointerDown={resize.onPointerDown}
+        />
       </section>
     </main>
   );
@@ -243,17 +297,26 @@ function useComputerAudioTranscriber(setWords: (words: string) => void) {
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ audio, context: transcriptRef.current }),
         });
-        const result = (await response.json()) as { text?: string; error?: string };
+        const result = (await response.json()) as {
+          text?: string;
+          error?: string;
+        };
         if (!response.ok)
-          throw new Error(result.error ?? `Transcription failed (${response.status})`);
+          throw new Error(
+            result.error ?? `Transcription failed (${response.status})`,
+          );
 
         const text = result.text?.trim();
         if (text) {
-          transcriptRef.current = `${transcriptRef.current} ${text}`.trim().slice(-1200);
+          transcriptRef.current = `${transcriptRef.current} ${text}`
+            .trim()
+            .slice(-1200);
           setWords(transcriptRef.current.slice(-80));
         }
       } catch (err) {
-        setError(err instanceof Error ? err.message : "Audio transcription failed");
+        setError(
+          err instanceof Error ? err.message : "Audio transcription failed",
+        );
       } finally {
         busyRef.current = false;
         setTranscribing(false);
@@ -279,7 +342,9 @@ function useComputerAudioTranscriber(setWords: (words: string) => void) {
         );
       }
 
-      stream.getTracks().forEach((track) => track.addEventListener("ended", stop));
+      stream
+        .getTracks()
+        .forEach((track) => track.addEventListener("ended", stop));
 
       const audioStream = new MediaStream(audioTracks);
       const recorder = startAudioRecorder(
@@ -292,7 +357,11 @@ function useComputerAudioTranscriber(setWords: (words: string) => void) {
       recorderRef.current = recorder;
       setActive(true);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Could not start computer audio capture");
+      setError(
+        err instanceof Error
+          ? err.message
+          : "Could not start computer audio capture",
+      );
       stop();
     }
   }, [stop, transcribe]);
@@ -307,7 +376,12 @@ function useComputerAudioTranscriber(setWords: (words: string) => void) {
 }
 
 function getSupportedAudioMimeType() {
-  const types = ["audio/webm;codecs=opus", "audio/webm", "audio/ogg;codecs=opus", "audio/mp4"];
+  const types = [
+    "audio/webm;codecs=opus",
+    "audio/webm",
+    "audio/ogg;codecs=opus",
+    "audio/mp4",
+  ];
   return types.find((type) => MediaRecorder.isTypeSupported(type)) ?? "";
 }
 
@@ -350,12 +424,19 @@ function blobToDataUrl(blob: Blob) {
   return new Promise<string>((resolve, reject) => {
     const reader = new FileReader();
     reader.onload = () => resolve(String(reader.result));
-    reader.onerror = () => reject(reader.error ?? new Error("Could not read audio"));
+    reader.onerror = () =>
+      reject(reader.error ?? new Error("Could not read audio"));
     reader.readAsDataURL(blob);
   });
 }
 
-function SignToWords({ reader, history }: { reader: SignReader; history: SignReader["phrases"] }) {
+function SignToWords({
+  reader,
+  history,
+}: {
+  reader: SignReader;
+  history: SignReader["phrases"];
+}) {
   return (
     <>
       <div className="min-h-[92px]">
@@ -397,8 +478,8 @@ function SignToWords({ reader, history }: { reader: SignReader; history: SignRea
           </button>
         )}
         <p className="text-[11px] leading-tight text-muted-foreground">
-          Sends short screen-frame bursts to Google Gemini for ASL letter and phrase recognition,
-          then speaks the result aloud.
+          Sends short screen-frame bursts to Google Gemini for ASL letter and
+          phrase recognition, then speaks the result aloud.
         </p>
       </div>
     </>
@@ -493,7 +574,10 @@ function WordsToSign({
               </div>
             ) : (
               <figure key={id} className="sign-tile">
-                <div className="sign-glyph" aria-label={`${character.toUpperCase()} in ASL`}>
+                <div
+                  className="sign-glyph"
+                  aria-label={`${character.toUpperCase()} in ASL`}
+                >
                   {character.toUpperCase()}
                 </div>
                 <figcaption>{character.toUpperCase()}</figcaption>
@@ -508,7 +592,8 @@ function WordsToSign({
       </div>
 
       <p className="text-[11px] leading-tight text-muted-foreground">
-        Uses the local Gallaudet fingerspelling font for consistent ASL alphabet signs.
+        Uses the local Gallaudet fingerspelling font for consistent ASL alphabet
+        signs.
       </p>
     </div>
   );

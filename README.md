@@ -49,7 +49,8 @@ The project also retains the previous MediaPipe landmark implementation for expe
 - Node.js 18 or newer
 - npm
 - Electron-compatible desktop environment
-- Google Gemini API key
+- Google Gemini API key for sign interpretation
+- Groq API key for listen-mode voice transcription
 - Screen-sharing support
 
 ## Installation
@@ -65,7 +66,8 @@ npm install
 AI_API_KEY=your_gemini_api_key
 GEMINI_API_BASE_URL=https://generativelanguage.googleapis.com/v1beta
 SIGN_INTERPRETATION_MODEL=gemini-2.5-flash
-AUDIO_TRANSCRIPTION_MODEL=gemini-2.5-flash
+GROQ_API_KEY=your_groq_api_key
+GROQ_WHISPER_MODEL=whisper-large-v3-turbo
 ```
 
 Running the Application

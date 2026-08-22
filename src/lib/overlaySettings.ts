@@ -15,9 +15,18 @@ declare global {
       toggleClickThrough: () => Promise<boolean>;
       setClickThrough: (enabled: boolean) => Promise<boolean>;
       setOverlayVisible?: (visible: boolean) => Promise<boolean>;
+      getOverlayVisible?: () => Promise<boolean>;
+      onOverlayVisibilityChanged?: (
+        callback: (visible: boolean) => void,
+      ) => () => void;
+      openDashboard?: () => Promise<void>;
       getSettings?: () => Promise<Partial<OverlaySettings>>;
-      updateSettings?: (patch: Partial<OverlaySettings>) => Promise<OverlaySettings>;
-      onSettingsChanged?: (callback: (settings: OverlaySettings) => void) => () => void;
+      updateSettings?: (
+        patch: Partial<OverlaySettings>,
+      ) => Promise<OverlaySettings>;
+      onSettingsChanged?: (
+        callback: (settings: OverlaySettings) => void,
+      ) => () => void;
       getLaunchOnStartup?: () => Promise<boolean>;
       setLaunchOnStartup?: (enabled: boolean) => Promise<boolean>;
       quit: () => Promise<void>;
@@ -38,7 +47,9 @@ export const DEFAULT_OVERLAY_SETTINGS: OverlaySettings = {
 const STORAGE_KEY = "signify-overlay-settings";
 const CHANNEL_NAME = "signify-overlay-settings";
 
-function normalizeSettings(settings: Partial<OverlaySettings>): OverlaySettings {
+function normalizeSettings(
+  settings: Partial<OverlaySettings>,
+): OverlaySettings {
   return {
     mode:
       settings.mode === "words-to-sign" || settings.mode === "sign-to-words"
@@ -49,13 +60,17 @@ function normalizeSettings(settings: Partial<OverlaySettings>): OverlaySettings 
         ? Math.min(90, Math.max(42, Math.round(settings.opacity)))
         : DEFAULT_OVERLAY_SETTINGS.opacity,
     voiceOn:
-      typeof settings.voiceOn === "boolean" ? settings.voiceOn : DEFAULT_OVERLAY_SETTINGS.voiceOn,
+      typeof settings.voiceOn === "boolean"
+        ? settings.voiceOn
+        : DEFAULT_OVERLAY_SETTINGS.voiceOn,
   };
 }
 
 function readStoredSettings() {
   try {
-    return normalizeSettings(JSON.parse(localStorage.getItem(STORAGE_KEY) ?? "{}"));
+    return normalizeSettings(
+      JSON.parse(localStorage.getItem(STORAGE_KEY) ?? "{}"),
+    );
   } catch {
     return DEFAULT_OVERLAY_SETTINGS;
   }
@@ -88,7 +103,8 @@ export function useOverlaySettings() {
       setSettings(normalizeSettings(next ?? {}));
     });
 
-    const channel = "BroadcastChannel" in window ? new BroadcastChannel(CHANNEL_NAME) : null;
+    const channel =
+      "BroadcastChannel" in window ? new BroadcastChannel(CHANNEL_NAME) : null;
     channel?.addEventListener("message", (event) => {
       setSettings(normalizeSettings(event.data ?? {}));
     });

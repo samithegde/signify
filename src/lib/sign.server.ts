@@ -23,7 +23,17 @@ export async function interpretFrames(input: { frames: string[]; context?: strin
       }),
     },
   );
-  if (!response.ok) throw new Error(`Sign interpretation failed: ${response.status}`);
+  if (!response.ok) {
+    const body = await response.text().catch(() => "");
+    let detail = "";
+    try {
+      const parsed = JSON.parse(body) as { error?: { message?: string } };
+      detail = parsed.error?.message ?? "";
+    } catch {
+      detail = body.slice(0, 240);
+    }
+    throw new Error(`Sign interpretation failed: ${response.status}${detail ? ` - ${detail}` : ""}`);
+  }
   const json = (await response.json()) as { candidates?: Array<{ content?: { parts?: Array<{ text?: string }> } }> };
   const raw = json.candidates?.[0]?.content?.parts?.map((part) => part.text ?? "").join("") ?? "";
   const match = raw.match(/\{[\s\S]*\}/);
@@ -37,62 +47,35 @@ export async function interpretFrames(input: { frames: string[]; context?: strin
 }
 
 export async function transcribeAudio(input: { audio: string; context?: string | undefined }) {
-  const key = process.env["AI_API_KEY"];
-  if (!key) throw new Error("Missing AI_API_KEY");
+  const key = process.env["GROQ_API_KEY"];
+  if (!key) throw new Error("Missing GROQ_API_KEY");
 
   const match = input.audio.match(/^data:([^;,]+)[^,]*,(.+)$/);
   if (!match?.[1] || !match[2]) throw new Error("Invalid audio payload");
 
-  const baseUrl =
-    process.env["GEMINI_API_BASE_URL"] || "https://generativelanguage.googleapis.com/v1beta";
-  const model = process.env["AUDIO_TRANSCRIPTION_MODEL"] || "gemini-2.5-flash";
-
-  const response = await fetch(
-    `${baseUrl.replace(/\/$/, "")}/models/${model}:generateContent?key=${encodeURIComponent(key)}`,
-    {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        contents: [
-          {
-            role: "user",
-            parts: [
-              {
-                text: `Transcribe only the new spoken words in this audio. Return strict JSON: {"text": string}. Previous transcript, do not repeat: ${input.context?.slice(-600) || "(none)"}`,
-              },
-              {
-                inlineData: {
-                  mimeType: match[1],
-                  data: match[2],
-                },
-              },
-            ],
-          },
-        ],
-        generationConfig: {
-          responseMimeType: "application/json",
-          temperature: 0,
-        },
-      }),
-    },
+  const model = process.env["GROQ_WHISPER_MODEL"] || "whisper-large-v3-turbo";
+  const audioBytes = Buffer.from(match[2], "base64");
+  const form = new FormData();
+  form.append("file", new Blob([audioBytes], { type: match[1] }), "audio.webm");
+  form.append("model", model);
+  form.append("response_format", "json");
+  form.append("temperature", "0");
+  form.append(
+    "prompt",
+    `Transcribe only the new spoken words. Do not repeat this recent transcript: ${input.context?.slice(-600) || "(none)"}`,
   );
+
+  const response = await fetch("https://api.groq.com/openai/v1/audio/transcriptions", {
+    method: "POST",
+    headers: { Authorization: `Bearer ${key}` },
+    body: form,
+  });
 
   if (!response.ok) {
     const body = await response.text().catch(() => "");
     throw new Error(`Audio transcription failed: ${response.status} ${body}`);
   }
 
-  const json = (await response.json()) as {
-    candidates?: Array<{ content?: { parts?: Array<{ text?: string }> } }>;
-  };
-  const raw = json.candidates?.[0]?.content?.parts?.map((part) => part.text ?? "").join("") ?? "";
-  const matchJson = raw.match(/\{[\s\S]*\}/);
-  if (!matchJson) return { text: "" };
-
-  try {
-    const parsed = JSON.parse(matchJson[0]) as { text?: string };
-    return { text: (parsed.text ?? "").trim() };
-  } catch {
-    return { text: "" };
-  }
+  const json = (await response.json()) as { text?: string };
+  return { text: (json.text ?? "").trim() };
 }

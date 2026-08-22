@@ -1,4 +1,13 @@
-const { app, BrowserWindow, desktopCapturer, globalShortcut, ipcMain, screen } = require("electron");
+const {
+  app,
+  BrowserWindow,
+  Menu,
+  Tray,
+  desktopCapturer,
+  globalShortcut,
+  ipcMain,
+  screen,
+} = require("electron");
 const path = require("path");
 
 // In dev the overlay points at the Vite server; packaged builds read OVERLAY_URL.
@@ -7,7 +16,9 @@ const APP_ICON = path.join(__dirname, "..", "assets", "signifyicon.png");
 
 let win = null;
 let dashboard = null;
+let tray = null;
 let clickThrough = false;
+let isQuitting = false;
 const DASHBOARD_URL = `${APP_URL}${APP_URL.includes("?") ? "&" : "?"}dashboard=1`;
 const overlaySettings = {
   mode: "sign-to-words",
@@ -20,6 +31,104 @@ function broadcastSettings() {
     if (target && !target.isDestroyed()) {
       target.webContents.send("overlay:settings-changed", overlaySettings);
     }
+  });
+}
+
+function getOverlayVisible() {
+  return Boolean(win && !win.isDestroyed() && win.isVisible());
+}
+
+function broadcastOverlayVisibility() {
+  if (dashboard && !dashboard.isDestroyed()) {
+    dashboard.webContents.send(
+      "overlay:visibility-changed",
+      getOverlayVisible(),
+    );
+  }
+}
+
+function requestQuit() {
+  isQuitting = true;
+  app.quit();
+}
+
+function showOverlay() {
+  if (!win || win.isDestroyed()) createWindow();
+  if (win.isMinimized()) win.restore();
+  win.show();
+  win.focus();
+  updateTrayMenu();
+  broadcastOverlayVisibility();
+  return getOverlayVisible();
+}
+
+function hideOverlay() {
+  if (win && !win.isDestroyed()) win.hide();
+  updateTrayMenu();
+  broadcastOverlayVisibility();
+  return getOverlayVisible();
+}
+
+function showDashboard() {
+  if (!dashboard || dashboard.isDestroyed()) createDashboard();
+  if (dashboard.isMinimized()) dashboard.restore();
+  dashboard.show();
+  dashboard.focus();
+  updateTrayMenu();
+}
+
+function updateTrayMenu() {
+  if (!tray) return;
+
+  tray.setContextMenu(
+    Menu.buildFromTemplate([
+      {
+        label: win?.isVisible() ? "Hide Overlay" : "Show Overlay",
+        click: () => {
+          if (!win || win.isDestroyed()) return showOverlay();
+          win.isVisible() ? hideOverlay() : showOverlay();
+        },
+      },
+      {
+        label: dashboard?.isVisible() ? "Hide Dashboard" : "Open Dashboard",
+        click: () => {
+          if (!dashboard || dashboard.isDestroyed()) return showDashboard();
+          dashboard.isVisible() ? dashboard.hide() : showDashboard();
+          updateTrayMenu();
+        },
+      },
+      { type: "separator" },
+      { label: "Quit Sign Overlay", click: requestQuit },
+    ]),
+  );
+}
+
+function createTray() {
+  if (tray) return;
+
+  tray = new Tray(APP_ICON);
+  tray.setToolTip("Sign Overlay");
+  tray.on("click", showOverlay);
+  tray.on("double-click", showDashboard);
+  updateTrayMenu();
+}
+
+function installAltF4Quit(window) {
+  window.webContents.on("before-input-event", (event, input) => {
+    if (input.type === "keyDown" && input.alt && input.key === "F4") {
+      event.preventDefault();
+      requestQuit();
+    }
+  });
+}
+
+function hideToTrayOnClose(window) {
+  window.on("close", (event) => {
+    if (isQuitting) return;
+    event.preventDefault();
+    window.hide();
+    updateTrayMenu();
+    if (window === win) broadcastOverlayVisibility();
   });
 }
 
@@ -50,13 +159,25 @@ function createWindow() {
   win.setAlwaysOnTop(true, "screen-saver");
   win.setVisibleOnAllWorkspaces(true, { visibleOnFullScreen: true });
   win.loadURL(APP_URL);
+  installAltF4Quit(win);
+  hideToTrayOnClose(win);
+  win.on("show", () => {
+    updateTrayMenu();
+    broadcastOverlayVisibility();
+  });
+  win.on("hide", () => {
+    updateTrayMenu();
+    broadcastOverlayVisibility();
+  });
 
   // Auto-approve screen sharing so getDisplayMedia() needs no picker.
-  win.webContents.session.setDisplayMediaRequestHandler((_request, callback) => {
-    desktopCapturer.getSources({ types: ["screen"] }).then((sources) => {
-      callback({ video: sources[0], audio: "loopback" });
-    });
-  });
+  win.webContents.session.setDisplayMediaRequestHandler(
+    (_request, callback) => {
+      desktopCapturer.getSources({ types: ["screen"] }).then((sources) => {
+        callback({ video: sources[0], audio: "loopback" });
+      });
+    },
+  );
 }
 
 function createDashboard() {
@@ -77,6 +198,10 @@ function createDashboard() {
   });
 
   dashboard.loadURL(DASHBOARD_URL);
+  installAltF4Quit(dashboard);
+  hideToTrayOnClose(dashboard);
+  dashboard.on("show", updateTrayMenu);
+  dashboard.on("hide", updateTrayMenu);
   dashboard.once("ready-to-show", () => dashboard.show());
   dashboard.on("closed", () => {
     dashboard = null;
@@ -96,9 +221,13 @@ ipcMain.handle("overlay:set-click-through", (_event, enabled) => {
 });
 
 ipcMain.handle("overlay:set-visible", (_event, visible) => {
-  if (visible) win?.show();
-  else win?.hide();
-  return Boolean(visible);
+  return visible ? showOverlay() : hideOverlay();
+});
+
+ipcMain.handle("overlay:get-visible", () => getOverlayVisible());
+
+ipcMain.handle("overlay:open-dashboard", () => {
+  showDashboard();
 });
 
 ipcMain.handle("overlay:get-settings", () => overlaySettings);
@@ -109,7 +238,10 @@ ipcMain.handle("overlay:update-settings", (_event, patch) => {
       overlaySettings.mode = patch.mode;
     }
     if (typeof patch.opacity === "number") {
-      overlaySettings.opacity = Math.min(90, Math.max(42, Math.round(patch.opacity)));
+      overlaySettings.opacity = Math.min(
+        90,
+        Math.max(42, Math.round(patch.opacity)),
+      );
     }
     if (typeof patch.voiceOn === "boolean") {
       overlaySettings.voiceOn = patch.voiceOn;
@@ -120,7 +252,10 @@ ipcMain.handle("overlay:update-settings", (_event, patch) => {
   return overlaySettings;
 });
 
-ipcMain.handle("overlay:get-launch-on-startup", () => app.getLoginItemSettings().openAtLogin);
+ipcMain.handle(
+  "overlay:get-launch-on-startup",
+  () => app.getLoginItemSettings().openAtLogin,
+);
 
 ipcMain.handle("overlay:set-launch-on-startup", (_event, enabled) => {
   app.setLoginItemSettings({ openAtLogin: Boolean(enabled) });
@@ -146,7 +281,10 @@ ipcMain.handle("overlay:drag-start", () => {
   dragTimer = setInterval(() => {
     if (!win || win.isDestroyed()) return stopDrag();
     const point = screen.getCursorScreenPoint();
-    win.setPosition(Math.round(point.x - offsetX), Math.round(point.y - offsetY));
+    win.setPosition(
+      Math.round(point.x - offsetX),
+      Math.round(point.y - offsetY),
+    );
   }, 8);
 });
 
@@ -179,22 +317,28 @@ ipcMain.handle("overlay:resize-start", () => {
 
 ipcMain.handle("overlay:resize-end", () => stopResize());
 
-ipcMain.handle("overlay:quit", () => app.quit());
-
+ipcMain.handle("overlay:quit", () => requestQuit());
 
 app.whenReady().then(() => {
   app.setAppUserModelId("com.signify.dialogue-overlay");
+  createTray();
   createWindow();
   createDashboard();
   globalShortcut.register("CommandOrControl+Shift+O", () => {
-    if (!win) return;
-    win.isVisible() ? win.hide() : win.show();
+    if (!win || win.isDestroyed()) return showOverlay();
+    win.isVisible() ? hideOverlay() : showOverlay();
   });
   globalShortcut.register("CommandOrControl+Shift+D", () => {
-    if (!dashboard) return createDashboard();
-    dashboard.isVisible() ? dashboard.hide() : dashboard.show();
+    if (!dashboard || dashboard.isDestroyed()) return showDashboard();
+    dashboard.isVisible() ? dashboard.hide() : showDashboard();
+    updateTrayMenu();
   });
 });
 
-app.on("window-all-closed", () => app.quit());
+app.on("window-all-closed", () => {
+  if (isQuitting) app.quit();
+});
+app.on("before-quit", () => {
+  isQuitting = true;
+});
 app.on("will-quit", () => globalShortcut.unregisterAll());

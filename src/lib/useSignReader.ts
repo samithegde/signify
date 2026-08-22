@@ -388,6 +388,8 @@ export function useMediaPipeSignReader() {
 
 const GEMINI_FRAMES_PER_BURST = 2;
 const GEMINI_FRAME_GAP_MS = 150;
+const GEMINI_REQUEST_COOLDOWN_MS = 1800;
+const GEMINI_RATE_LIMIT_BACKOFF_MS = 6000;
 const GEMINI_FRAME_WIDTH = 512;
 
 export function useSignReader() {
@@ -464,7 +466,11 @@ export function useSignReader() {
               body: JSON.stringify({ frames, context: transcriptRef.current }),
             });
             const result = (await response.json()) as { text?: string; confidence?: number; error?: string };
-            if (!response.ok) throw new Error(result.error ?? `Gemini interpretation failed (${response.status})`);
+            if (!response.ok) {
+              const error = new Error(result.error ?? `Gemini interpretation failed (${response.status})`);
+              (error as Error & { status?: number }).status = response.status;
+              throw error;
+            }
             const text = result.text?.trim();
             if (text && (result.confidence ?? 0) >= 0.55) {
               transcriptRef.current = `${transcriptRef.current} ${text}`.trim().slice(-1200);
@@ -474,10 +480,14 @@ export function useSignReader() {
             }
           } catch (err) {
             setError(err instanceof Error ? err.message : "Gemini interpretation failed");
-            await new Promise((resolve) => setTimeout(resolve, 1500));
+            const status = err instanceof Error ? (err as Error & { status?: number }).status : undefined;
+            await new Promise((resolve) =>
+              setTimeout(resolve, status === 429 ? GEMINI_RATE_LIMIT_BACKOFF_MS : 1500),
+            );
           } finally {
             setThinking(false);
           }
+          await new Promise((resolve) => setTimeout(resolve, GEMINI_REQUEST_COOLDOWN_MS));
         }
       })();
     } catch (err) {
