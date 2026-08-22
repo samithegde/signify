@@ -397,8 +397,8 @@ function SignToWords({ reader, history }: { reader: SignReader; history: SignRea
           </button>
         )}
         <p className="text-[11px] leading-tight text-muted-foreground">
-          Tracks hand keypoints locally with MediaPipe Hands, recognizes simple signs, then speaks
-          them aloud.
+          Sends short screen-frame bursts to Google Gemini for ASL letter and phrase recognition,
+          then speaks the result aloud.
         </p>
       </div>
     </>
