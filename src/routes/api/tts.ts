@@ -4,14 +4,15 @@ export const Route = createFileRoute("/api/tts")({
   server: {
     handlers: {
       POST: async ({ request }) => {
-        const key = process.env["LOVABLE_API_KEY"];
-        if (!key) return new Response("Missing LOVABLE_API_KEY", { status: 500 });
+        const key = process.env["AI_API_KEY"];
+        if (!key) return new Response("Missing AI_API_KEY", { status: 500 });
+        const baseUrl = process.env["AI_API_BASE_URL"] || "https://api.openai.com/v1";
 
         const body = (await request.json().catch(() => null)) as { text?: string } | null;
         const text = body?.text?.trim();
         if (!text) return new Response("Missing text", { status: 400 });
 
-        const response = await fetch("https://ai.gateway.lovable.dev/v1/audio/speech", {
+        const response = await fetch(`${baseUrl}/audio/speech`, {
           method: "POST",
           headers: {
             Authorization: `Bearer ${key}`,

@@ -1,7 +1,6 @@
 const { app, BrowserWindow, desktopCapturer, globalShortcut, ipcMain, screen } = require("electron");
 
-// The overlay renders the Lovable app. In dev it points at the Vite server;
-// packaged builds read OVERLAY_URL (your published app URL).
+// In dev the overlay points at the Vite server; packaged builds read OVERLAY_URL.
 const APP_URL = process.env.OVERLAY_URL || "http://localhost:8080/";
 
 let win = null;

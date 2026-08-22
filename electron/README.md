@@ -15,7 +15,7 @@ npx electron .         # terminal 2: the overlay window
 Point the shell at a deployed build instead:
 
 ```bash
-OVERLAY_URL="https://your-app.lovable.app/" npx electron .
+OVERLAY_URL="https://your-app.example.com/" npx electron .
 ```
 
 ## Package

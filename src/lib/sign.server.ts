@@ -1,17 +1,18 @@
 import { SIGN_SYSTEM_PROMPT } from "./sign.shared";
 
 export async function interpretFrames(input: { frames: string[]; context?: string | undefined }) {
-  const key = process.env["LOVABLE_API_KEY"];
-  if (!key) throw new Error("Missing LOVABLE_API_KEY");
+  const key = process.env["AI_API_KEY"];
+  if (!key) throw new Error("Missing AI_API_KEY");
+  const baseUrl = process.env["AI_API_BASE_URL"] || "https://api.openai.com/v1";
 
-  const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+  const response = await fetch(`${baseUrl}/chat/completions`, {
     method: "POST",
     headers: {
       Authorization: `Bearer ${key}`,
       "Content-Type": "application/json",
     },
     body: JSON.stringify({
-      model: "google/gemini-2.5-flash",
+      model: "gpt-4o-mini",
       messages: [
         { role: "system", content: SIGN_SYSTEM_PROMPT },
         {
