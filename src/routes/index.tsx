@@ -1,8 +1,8 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
-import { Ghost, Hand, Mic, MicOff, Play, Square, Trash2, X } from "lucide-react";
+import { Contrast, Ghost, Hand, Mic, MicOff, Play, Square, Trash2, X } from "lucide-react";
 import { useSignReader } from "@/lib/useSignReader";
-import { useOverlayDrag } from "@/lib/useOverlayDrag";
+import { useOverlayDrag, useOverlayResize } from "@/lib/useOverlayDrag";
 
 export const Route = createFileRoute("/")({
   head: () => ({
@@ -90,6 +90,13 @@ function Overlay() {
             >
               {reader.voiceOn ? <Mic className="size-4" /> : <MicOff className="size-4" />}
             </button>
+            <button
+              className="ctl"
+              title="Cycle translucency"
+              onClick={() => setAlphaStep((step) => (step + 1) % TRANSLUCENCY.length)}
+            >
+              <Contrast className="size-4" />
+            </button>
             <button className="ctl" title="Clear transcript" onClick={reader.clear}>
               <Trash2 className="size-4" />
             </button>
@@ -147,6 +154,12 @@ function Overlay() {
             </p>
           </div>
         </div>
+
+        <div
+          className="no-drag grip"
+          title="Drag to resize"
+          onPointerDown={resize.onPointerDown}
+        />
       </section>
     </main>
   );

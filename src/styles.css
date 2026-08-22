@@ -216,3 +216,28 @@
   }
 }
 
+
+@utility grip {
+  position: absolute;
+  right: 0;
+  bottom: 0;
+  height: 1.15rem;
+  width: 1.15rem;
+  cursor: nwse-resize;
+  background: linear-gradient(
+    135deg,
+    transparent 45%,
+    var(--color-muted-foreground) 45%,
+    var(--color-muted-foreground) 55%,
+    transparent 55%,
+    transparent 70%,
+    var(--color-muted-foreground) 70%,
+    var(--color-muted-foreground) 80%,
+    transparent 80%
+  );
+  opacity: 0.55;
+
+  &:hover {
+    opacity: 1;
+  }
+}
