@@ -82,7 +82,7 @@ npx electron .
 The dashboard opens as a normal taskbar window, while the overlay appears separately on top of other applications.
 
 Keyboard Shortcuts:
-Ctrl/Cmd + Shift + O	| Show or hide the overlay
-Ctrl/Cmd + Shift + D	| Show or hide the dashboard
+`Ctrl/Cmd + Shift + O	| Show or hide the overlay`
+`Ctrl/Cmd + Shift + D	| Show or hide the dashboard`
 
 Clicking the overlay X button hides the overlay without quitting the application.
