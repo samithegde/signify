@@ -1,10 +1,27 @@
 const { app, BrowserWindow, desktopCapturer, globalShortcut, ipcMain, screen } = require("electron");
+const path = require("path");
 
 // In dev the overlay points at the Vite server; packaged builds read OVERLAY_URL.
 const APP_URL = process.env.OVERLAY_URL || "http://localhost:8080/";
+const APP_ICON = path.join(__dirname, "..", "assets", "signifyicon.png");
 
 let win = null;
+let dashboard = null;
 let clickThrough = false;
+const DASHBOARD_URL = `${APP_URL}${APP_URL.includes("?") ? "&" : "?"}dashboard=1`;
+const overlaySettings = {
+  mode: "sign-to-words",
+  opacity: 68,
+  voiceOn: true,
+};
+
+function broadcastSettings() {
+  [win, dashboard].forEach((target) => {
+    if (target && !target.isDestroyed()) {
+      target.webContents.send("overlay:settings-changed", overlaySettings);
+    }
+  });
+}
 
 function createWindow() {
   const { width, height } = screen.getPrimaryDisplay().workAreaSize;
@@ -22,10 +39,11 @@ function createWindow() {
     alwaysOnTop: true,
     skipTaskbar: true,
     hasShadow: false,
+    icon: APP_ICON,
     webPreferences: {
       contextIsolation: true,
       nodeIntegration: false,
-      preload: require("path").join(__dirname, "preload.cjs"),
+      preload: path.join(__dirname, "preload.cjs"),
     },
   });
 
@@ -41,6 +59,30 @@ function createWindow() {
   });
 }
 
+function createDashboard() {
+  dashboard = new BrowserWindow({
+    width: 1040,
+    height: 760,
+    minWidth: 760,
+    minHeight: 580,
+    title: "Sign Overlay Dashboard",
+    backgroundColor: "#101820",
+    icon: APP_ICON,
+    show: false,
+    webPreferences: {
+      contextIsolation: true,
+      nodeIntegration: false,
+      preload: path.join(__dirname, "preload.cjs"),
+    },
+  });
+
+  dashboard.loadURL(DASHBOARD_URL);
+  dashboard.once("ready-to-show", () => dashboard.show());
+  dashboard.on("closed", () => {
+    dashboard = null;
+  });
+}
+
 ipcMain.handle("overlay:toggle-click-through", () => {
   clickThrough = !clickThrough;
   win?.setIgnoreMouseEvents(clickThrough, { forward: true });
@@ -51,6 +93,38 @@ ipcMain.handle("overlay:set-click-through", (_event, enabled) => {
   clickThrough = Boolean(enabled);
   win?.setIgnoreMouseEvents(clickThrough, { forward: true });
   return clickThrough;
+});
+
+ipcMain.handle("overlay:set-visible", (_event, visible) => {
+  if (visible) win?.show();
+  else win?.hide();
+  return Boolean(visible);
+});
+
+ipcMain.handle("overlay:get-settings", () => overlaySettings);
+
+ipcMain.handle("overlay:update-settings", (_event, patch) => {
+  if (patch && typeof patch === "object") {
+    if (patch.mode === "sign-to-words" || patch.mode === "words-to-sign") {
+      overlaySettings.mode = patch.mode;
+    }
+    if (typeof patch.opacity === "number") {
+      overlaySettings.opacity = Math.min(90, Math.max(42, Math.round(patch.opacity)));
+    }
+    if (typeof patch.voiceOn === "boolean") {
+      overlaySettings.voiceOn = patch.voiceOn;
+    }
+  }
+
+  broadcastSettings();
+  return overlaySettings;
+});
+
+ipcMain.handle("overlay:get-launch-on-startup", () => app.getLoginItemSettings().openAtLogin);
+
+ipcMain.handle("overlay:set-launch-on-startup", (_event, enabled) => {
+  app.setLoginItemSettings({ openAtLogin: Boolean(enabled) });
+  return app.getLoginItemSettings().openAtLogin;
 });
 
 // Manual window dragging: follow the OS cursor while the user holds the header.
@@ -109,10 +183,16 @@ ipcMain.handle("overlay:quit", () => app.quit());
 
 
 app.whenReady().then(() => {
+  app.setAppUserModelId("com.signify.dialogue-overlay");
   createWindow();
+  createDashboard();
   globalShortcut.register("CommandOrControl+Shift+O", () => {
     if (!win) return;
     win.isVisible() ? win.hide() : win.show();
+  });
+  globalShortcut.register("CommandOrControl+Shift+D", () => {
+    if (!dashboard) return createDashboard();
+    dashboard.isVisible() ? dashboard.hide() : dashboard.show();
   });
 });
 

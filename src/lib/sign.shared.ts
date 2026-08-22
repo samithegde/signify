@@ -1,19 +1,20 @@
 import { z } from "zod";
 
-export const SignFramesInput = z.object({
-  /** Ordered JPEG data URLs sampled from the screen (oldest -> newest). */
-  frames: z.array(z.string().min(32)).min(1).max(8),
-  /** Words already spoken, so the model can continue instead of repeating. */
+export const AudioTranscriptionInput = z.object({
+  /** Browser-recorded audio chunk as a data URL. */
+  audio: z.string().min(64).max(12_000_000),
+  /** Recently transcribed words so the model can avoid repeating them. */
   context: z.string().max(2000).optional(),
 });
 
-export const SIGN_SYSTEM_PROMPT = `You are a real-time sign language interpreter watching a short burst of consecutive screen frames.
-The frames show a person signing (ASL unless clearly another sign language).
-Translate ONLY the new signing visible in these frames into natural spoken-language text.
+export const SignFramesInput = z.object({
+  frames: z.array(z.string().min(32)).min(1).max(6),
+  context: z.string().max(2000).optional(),
+});
 
-Rules:
-- Reply with STRICT JSON: {"text": string, "confidence": number}
-- "text": the newly interpreted words, plain sentence case, no quotes, no commentary.
-- If the frames show no hands/signing, or the signing is unreadable, return {"text": "", "confidence": 0}.
-- Do not repeat words already present in the previous transcript.
-- Keep it short: only what these frames actually show.`;
+export const SIGN_SYSTEM_PROMPT = `You are an ASL fingerspelling interpreter watching consecutive screen frames.
+Interpret only the clearly visible new ASL letters or short phrases. Focus on hand shape, finger positions, and the order of letters across frames.
+Reply with strict JSON only: {"text": string, "confidence": number}.
+Use uppercase letters for isolated fingerspelled letters and natural sentence case for a clearly completed phrase.
+If the hand is absent, blurred, too small, or ambiguous, return {"text":"","confidence":0}.
+Never guess. Do not repeat text already in the previous transcript. Keep the response short.`;

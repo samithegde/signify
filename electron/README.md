@@ -1,8 +1,8 @@
 # Sign Overlay (Electron shell)
 
 The Electron shell is a transparent, always-on-top, frameless window that loads the
-React overlay and auto-approves screen capture, so the AI can read signing from
-anything on your screen (video call, recording, streaming player).
+React overlay and auto-approves screen capture, so local hand-sign recognition can
+read signing from anything on your screen (video call, recording, streaming player).
 
 ## Run locally
 
