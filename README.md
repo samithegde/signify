@@ -70,10 +70,14 @@ AUDIO_TRANSCRIPTION_MODEL=gemini-2.5-flash
 
 Running the Application
 Start the Vite development server:
+```bash
 npm run dev -- --port 8080
+```
 
 In a second terminal, start Electron:
+```bash
 npx electron .
+```
 
 The dashboard opens as a normal taskbar window, while the overlay appears separately on top of other applications.
 
