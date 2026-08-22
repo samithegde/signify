@@ -3,7 +3,8 @@ import { SIGN_SYSTEM_PROMPT } from "./sign.shared";
 export async function interpretFrames(input: { frames: string[]; context?: string | undefined }) {
   const key = process.env["AI_API_KEY"];
   if (!key) throw new Error("Missing AI_API_KEY");
-  const baseUrl = process.env["AI_API_BASE_URL"] || "https://api.openai.com/v1";
+  const baseUrl =
+    process.env["AI_API_BASE_URL"] || "https://api.groq.com/openai/v1";
 
   const response = await fetch(`${baseUrl}/chat/completions`, {
     method: "POST",
@@ -12,7 +13,7 @@ export async function interpretFrames(input: { frames: string[]; context?: strin
       "Content-Type": "application/json",
     },
     body: JSON.stringify({
-      model: "gpt-4o-mini",
+      model: "meta-llama/llama-4-scout-17b-16e-instruct",
       messages: [
         { role: "system", content: SIGN_SYSTEM_PROMPT },
         {

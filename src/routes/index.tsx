@@ -29,6 +29,7 @@ declare global {
     overlay?: {
       isElectron: boolean;
       toggleClickThrough: () => Promise<boolean>;
+      setClickThrough: (enabled: boolean) => Promise<boolean>;
       quit: () => Promise<void>;
       dragStart?: () => Promise<void>;
       dragEnd?: () => Promise<void>;
@@ -53,6 +54,12 @@ function Overlay() {
   const history = reader.phrases.slice(0, -1).slice(-6);
   const alpha = TRANSLUCENCY[alphaStep];
 
+  const restoreInteraction = () => {
+    if (ghost && window.overlay) {
+      void window.overlay.setClickThrough(false).then(setGhost);
+    }
+  };
+
   return (
     <main className="flex min-h-screen items-end justify-center bg-transparent p-4 select-none">
       <section
@@ -67,6 +74,7 @@ function Overlay() {
           className="drag-region flex items-center gap-2 border-b border-border/60 px-4 py-2.5"
           style={{ cursor: drag.dragging ? "grabbing" : "grab" }}
           onPointerDown={drag.onPointerDown}
+          onPointerEnter={restoreInteraction}
           onDoubleClick={() => drag.reset()}
         >
 
@@ -104,7 +112,7 @@ function Overlay() {
               <>
                 <button
                   className={`ctl ${ghost ? "is-on" : ""}`}
-                  title="Click-through mode"
+                  title={ghost ? "Disable click-through mode" : "Enable click-through mode"}
                   onClick={async () => setGhost(await window.overlay!.toggleClickThrough())}
                 >
                   <Ghost className="size-4" />
@@ -140,11 +148,11 @@ function Overlay() {
 
           <div className="mt-4 flex items-center gap-2">
             {reader.active ? (
-              <button className="btn-stop" onClick={reader.stop}>
+              <button className="btn-stop" title="Stop reading and screen capture" onClick={reader.stop}>
                 <Square className="size-4" /> Stop
               </button>
             ) : (
-              <button className="btn-go" onClick={reader.start}>
+              <button className="btn-go" title="Start reading sign language from your screen" onClick={reader.start}>
                 <Play className="size-4" /> Start reading
               </button>
             )}

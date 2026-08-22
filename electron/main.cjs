@@ -47,6 +47,12 @@ ipcMain.handle("overlay:toggle-click-through", () => {
   return clickThrough;
 });
 
+ipcMain.handle("overlay:set-click-through", (_event, enabled) => {
+  clickThrough = Boolean(enabled);
+  win?.setIgnoreMouseEvents(clickThrough, { forward: true });
+  return clickThrough;
+});
+
 // Manual window dragging: follow the OS cursor while the user holds the header.
 let dragTimer = null;
 
