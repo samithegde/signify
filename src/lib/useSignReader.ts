@@ -386,9 +386,9 @@ export function useMediaPipeSignReader() {
   };
 }
 
-const GEMINI_FRAMES_PER_BURST = 3;
-const GEMINI_FRAME_GAP_MS = 300;
-const GEMINI_FRAME_WIDTH = 640;
+const GEMINI_FRAMES_PER_BURST = 2;
+const GEMINI_FRAME_GAP_MS = 150;
+const GEMINI_FRAME_WIDTH = 512;
 
 export function useSignReader() {
   const [active, setActive] = useState(false);
@@ -435,7 +435,7 @@ export function useSignReader() {
     setError(null);
     try {
       primeAudio();
-      const stream = await navigator.mediaDevices.getDisplayMedia({ video: { frameRate: 15 }, audio: false });
+      const stream = await navigator.mediaDevices.getDisplayMedia({ video: { frameRate: 24 }, audio: false });
       streamRef.current = stream;
       stream.getVideoTracks()[0]?.addEventListener("ended", stop);
       const video = document.createElement("video");

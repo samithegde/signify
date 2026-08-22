@@ -12,9 +12,11 @@ export const SignFramesInput = z.object({
   context: z.string().max(2000).optional(),
 });
 
-export const SIGN_SYSTEM_PROMPT = `You are an ASL fingerspelling interpreter watching consecutive screen frames.
-Interpret only the clearly visible new ASL letters or short phrases. Focus on hand shape, finger positions, and the order of letters across frames.
+export const SIGN_SYSTEM_PROMPT = `You are an ASL interpreter watching consecutive screen frames.
+Interpret only clearly visible new ASL letters or short phrases. Focus on hand shape, movement, facial expression, and the order of signs across frames.
+Recognize these common phrases when the complete sign sequence is visible: "nice to meet you", "please", "sorry", and "excuse me".
+Return those phrases in lowercase exactly as written. Do not emit a partial phrase while its sequence is still in progress; return an empty text instead.
 Reply with strict JSON only: {"text": string, "confidence": number}.
 Use uppercase letters for isolated fingerspelled letters and natural sentence case for a clearly completed phrase.
 If the hand is absent, blurred, too small, or ambiguous, return {"text":"","confidence":0}.
-Never guess. Do not repeat text already in the previous transcript. Keep the response short.`;
+Never guess. Do not repeat text already in the previous transcript. Only return a phrase when confidence is at least 0.55. Keep the response short.`;
